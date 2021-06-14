@@ -8,10 +8,10 @@
 
 3: Enter Following Build and Run commands
 
-# Build terminal command:
+# Build Terminal Command
 
 docker build -t my-go-app .
 
-# Run Project as well as all unit tests
+# Run Project and All Unit Tests Terminal Command
 
 docker run -p 8080:8081 my-go-app sh -c "go test"
