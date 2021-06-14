@@ -11,7 +11,7 @@ import (
 	"strconv"  // package used to covert string into int type
 	"strings"
 
-	"github.com/gorilla/mux" // used to get the params from the route
+	// used to get the params from the route
 
 	"github.com/joho/godotenv" // package used to read the .env file
 	_ "github.com/lib/pq"      // postgres golang driver
@@ -46,9 +46,12 @@ func createConnection() *sql.DB {
 		panic(err)
 	}
 
-	fmt.Println("Successfully connected!")
+	//fmt.Println("Successfully connected!")
 	// return the connection
 	return db
+}
+func PrepForTesting() {
+	clearDB()
 }
 
 //Creates a new book object and adds to postgres db
@@ -143,12 +146,9 @@ func UpdateBook(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Methods", "PUT")
 	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
 
-	// get the book id from the request params
-	params := mux.Vars(r)
+	stringid := strings.ReplaceAll(r.URL.String(), "/api/book/", "")
 
-	// convert the id type from string to int
-	id, err := strconv.Atoi(params["id"])
-
+	id, err := strconv.Atoi(stringid)
 	if err != nil {
 		log.Fatalf("Unable to convert the string into int.  %v", err)
 	}
@@ -165,7 +165,7 @@ func UpdateBook(w http.ResponseWriter, r *http.Request) {
 	updatedRows := updateBook(int64(id), book)
 
 	//set message to success message and show how many rows were affected
-	msg := fmt.Sprintf("User updated successfully. Total rows/record affected %v", updatedRows)
+	msg := fmt.Sprintf("User updated successfully. Total rows/record affected %v ", updatedRows)
 
 	//check to see if there was error (Was not sure what/how to handle this the right way so I just checked to see if error id was 400 and if so display message to http)
 	if updatedRows == -1 {
@@ -174,7 +174,7 @@ func UpdateBook(w http.ResponseWriter, r *http.Request) {
 
 	//create response object and set error id and message
 	res := response{
-		ID:      updatedRows,
+		ID:      int64(id),
 		Message: msg,
 	}
 
@@ -236,7 +236,7 @@ func insertBook(book models.Book) int64 {
 		log.Fatalf("Unable to execute the query. %v", err)
 	}
 	//success message
-	fmt.Printf("Inserted a single record %v", id)
+	//fmt.Println("Inserted a single record ", id)
 
 	//return the inserted id
 	return id
@@ -264,7 +264,7 @@ func getBookByID(id int64) (models.Book, error) {
 
 	switch err {
 	case sql.ErrNoRows:
-		fmt.Println("No rows were returned!")
+		//fmt.Println("No rows were returned!")
 		return book, nil
 	case nil:
 		return book, nil
@@ -347,7 +347,7 @@ func updateBook(id int64, book models.Book) int64 {
 		log.Fatalf("Error while checking the affected rows. %v", err)
 	}
 
-	fmt.Printf("Total rows/record affected %v", rowsAffected)
+	//fmt.Printf("Total rows/record affected %v", rowsAffected)
 
 	return rowsAffected
 }
@@ -378,7 +378,30 @@ func deleteBook(id int64) int64 {
 		log.Fatalf("Error while checking the affected rows. %v", err)
 	}
 
-	fmt.Printf("Total rows/record affected %v", rowsAffected)
+	//fmt.Printf("Total rows/record affected %v", rowsAffected)
 
 	return rowsAffected
+}
+func clearDB() {
+	// create the postgres db connection
+	db := createConnection()
+
+	// close the db connection
+	defer db.Close()
+
+	// create the delete sql query
+	sqlStatement := `
+	TRUNCATE book;
+	DELETE FROM book;
+	ALTER SEQUENCE book_id_seq RESTART WITH 1;`
+
+	// execute the sql statement
+	rows, err := db.Query(sqlStatement)
+
+	if err != nil {
+		log.Fatalf("Unable to execute the query. %v", err)
+	}
+	// close the statement
+	defer rows.Close()
+
 }
